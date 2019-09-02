@@ -110,12 +110,16 @@ class ThemeFragmentsTilesVocabularyFactory(object):
                  if splitext(filename)[-1] == '.pt' and
                  themeDirectory[FRAGMENTS_DIRECTORY].isFile(filename)]
 
-        terms = [SimpleTerm(None, '', _(u'-- select fragment --'))]
+        fragment_tiles = []
         for tile in tiles:
             title = titles.get(tile, None)
             title = title is None and tile or title.strip().split('#')[0]
             if title and not title.startswith("Hidden"):
-                terms.append(SimpleTerm(tile, tile, title))
+                fragment_tiles.append([title, tile])
+
+        fragment_tiles.append([_(u'-- select fragment --'), None ])
+        fragment_tiles.sort()
+        terms = [ SimpleTerm(value=pair[1], token=pair[1], title=pair[0]) for pair in fragment_tiles ]
         return SimpleVocabulary(terms)
 
 
@@ -130,7 +134,7 @@ class FragmentSchemaPolicy(DefaultSchemaPolicy):
 def getFragmentSchemata(name):
     """Get matching XML schema for theme fragment"""
     request = getRequest()
-    filename = '{0}.xml'.format(name)
+    filename = (u'{0}.xml'.format(name)).encode('utf-8', 'ignore')
 
     if not isThemeEnabled(request):
         return SimpleVocabulary([])
@@ -189,7 +193,7 @@ class FragmentTile(Tile):
     def update(self):
         try:
             self.index = ThemeFragment(self.context, self.request)[
-                self.data['fragment']]
+                self.data['fragment'].encode('utf-8')]
             self.index.id = self.id
             self.index.url = self.url
             self.index.data = self.data
@@ -290,7 +294,10 @@ def getFragmentName(request):
         last = request.getURL().split('/')[-1]
         if last.startswith(prefix):
             fragment = last[len(prefix):].split('.')[0]
-    return safe_unicode(fragment)
+    if isinstance(fragment, unicode):
+        return fragment.encode('utf-8', 'replace')
+    else:
+        return fragment
 
 
 class PrefixedGroup(Group):
